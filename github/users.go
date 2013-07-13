@@ -42,6 +42,25 @@ type User struct {
 func (u User) String() string {
 	return Stringify(u)
 }
+// FollowingUser represents a subset of fields of a GitHub user.
+// but also contains information that can be used to query
+// the users details further
+type FollowingUser struct {
+	User
+	Type              string `json:"type,omitempty"`
+	FollowersURL      string `json:"followers_url,omitempty"`
+	FollowingURL      string `json:"following_url,omitempty"`
+	GistsURL          string `json:"gists_url,omitempty"`
+	StarredURL        string `json:"starred_url,omitempty"`
+	SubscriptionsURL  string `json:"subscriptions_url,omitempty"`
+	OrganizationsURL  string `json:"organizations_url,omitempty"`
+	ReposURL          string `json:"repos_url,omitempty"`
+	EventsURL         string `json:"events_url,omitempty"`
+	ReceivedEventsURL string `json:"received_events_url,omitempty"`
+}
+
+// UserEmail represents user's email address
+type UserEmail string
 
 // Get fetches a user.  Passing the empty string will fetch the authenticated
 // user.
@@ -106,4 +125,44 @@ func (s *UsersService) ListAll(opt *UserListOptions) ([]User, *Response, error) 
 	users := new([]User)
 	resp, err := s.client.Do(req, users)
 	return *users, resp, err
+}
+
+// ListFollowers lists an authenticated users followers or a specified users followers
+//
+// http://developer.github.com/v3/users/followers/#list-followers-of-a-user
+func (s *UsersService) ListFollowers(user string) ([]FollowingUser, error) {
+	u := "/user/followers"
+	if user != "" {
+		u = fmt.Sprintf("/users/%v/followers", user)
+	}
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	users := new([]FollowingUser)
+	_, err = s.client.Do(req, users)
+	return *users, err
+}
+
+// FollowingUser this lets you determine if you are following a user or not
+//
+// TODO : replace me with correct url
+func (s *UsersService) FollowingUser(user string) (bool, error) {
+    u := fmt.Sprintf("/user/following/%v", user)
+
+	req, err := s.client.NewRequest("GET", u, nil)
+	if err != nil {
+		return false, err
+	}
+
+    resp , err := s.client.Do(req,nil)
+    if resp.StatusCode == 202{
+        return true,err
+    }else if resp.StatusCode == 404{
+        return false,err
+    }
+    //handle returning a erros
+	return false, err
 }
